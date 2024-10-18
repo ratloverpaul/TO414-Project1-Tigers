@@ -1,0 +1,58 @@
+---
+title: "Group Project"
+author: "Rachel Lewis"
+date: "2024-10-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+Group: Tigers
+Group names: Rachel, Paul, Nathan, Adil
+
+In this group project, we will be analyzing tele-marketing data to predict the likelihood of success for tele-marketing calls. This assignment provides an opportunity to tackle a significant business challenge, giving us hands-on experience with real-world data from a bank's telemarketing campaign. Our goal is to develop insights into why the call center is underperforming and to create predictive models to address this issue.
+
+The dataset for this project, tele.csv, reflects a real-world scenario where approximately 90% of the telemarketing calls fail to convert. This highlights the urgent need for optimization, which we aim to explore through data analytics.
+
+## Get Data
+
+```{r}
+calls <- read.csv("tele.csv")
+```
+
+## Clean Data
+
+We are removing the X, duration, and pdays variables. The x variablue only counts the amount of rows, the duration variable gives data about the call that we are trying to predict, and the pdays variable gives us information that we can get from poutcome and contact variables. We also factorized all the "character" variables and turned the response variable into a binary response. 
+
+```{r}
+calls$X <- NULL
+calls$duration <- NULL
+calls$pdays <- NULL
+
+calls$job <- as.factor(calls$job)
+calls$marital <- as.factor(calls$marital)
+calls$education <- as.factor(calls$education)
+calls$default <- as.factor(calls$default)
+calls$housing <- as.factor(calls$housing)
+calls$loan <- as.factor(calls$loan)
+calls$contact <- as.factor(calls$contact)
+calls$month <- as.factor(calls$month)
+calls$day_of_week <- as.factor(calls$day_of_week)
+calls$poutcome <- as.factor(calls$poutcome)
+calls$y <- ifelse(calls$y == "no", 0, 1)
+
+str(calls)
+summary(calls)
+```
+
+The breakeven percentage: 22.2%
+
+
+
+
+
+
