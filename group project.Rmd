@@ -19,7 +19,7 @@ library(reshape2)
 # Introduction
 
 Group: Tigers
-Group names: Rachel, Paul, Nathan, Adil
+Group names: Rachel, Paul, Nathan, Adil, William
 
 In this group project, we will be analyzing tele-marketing data to predict the likelihood of success for tele-marketing calls. This assignment provides an opportunity to tackle a significant business challenge, giving us hands-on experience with real-world data from a bank's telemarketing campaign. Our goal is to develop insights into why the call center is underperforming and to create predictive models to address this issue.
 
