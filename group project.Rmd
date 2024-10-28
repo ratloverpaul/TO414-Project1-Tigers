@@ -546,7 +546,7 @@ p1 <- predict(m1, calls_test, type = "response")
 summary(p1)
 
 #evaluate model
-p1bin <- ifelse(p1 > .4, 1, 0)
+p1bin <- ifelse(p1 > .5, 1, 0)
 confusionMatrix(as.factor(p1bin), as.factor(calls_test$y), positive = "1")
 ```
 
@@ -570,7 +570,7 @@ confusionMatrix(as.factor(p2), as.factor(calls_test$y), positive = "1")
 
 ```{r, cache=TRUE}
 #build model
-m3 <- neuralnet(y ~., data = new_scaled_calls, hidden = 1, stepmax = 1e8, lifesign = "full")
+m3 <- neuralnet(y ~., data = new_scaled_calls, hidden = 3, stepmax = 1e8, lifesign = "full")
 plot(m3)
 
 #predict model
@@ -578,7 +578,7 @@ p3 <- predict(m3, newdata = calls_test)
 summary(p3)
 
 #evaluate model
-p3bin <- ifelse(p3 > .4, 1, 0)
+p3bin <- ifelse(p3 > .5, 1, 0)
 confusionMatrix(as.factor(p3bin), as.factor(calls_test$y), positive = "1")
 ```
 # Combined Model
