@@ -203,5 +203,112 @@ This goes along with the job types that are linked to the highest success rates.
 
 
 
+# K-Means Clustering
+
+## Scale Data
+
+```{r}
+#select clustering features
+clustering_calls <- calls_scaled
+clustering_calls$y <- NULL
+
+#display clustering data
+str(clustering_calls)
+summary(clustering_calls)
+```
+
+
+```{r,cache=TRUE}
+# sample data (due to storage issue) to select optimal number of clusters d
+sample_size <- .4*nrow(clustering_calls)
+sample_rows <- sample(1:nrow(clustering_calls), sample_size)
+sample_calls <- clustering_calls[sample_rows, ]
+
+#fviz_nbclust(sample_calls[,], kmeans, method = "wss")
+#fviz_nbclust(sample_calls[,], kmeans, method = "gap_stat")
+#fviz_nbclust(sample_calls[,], kmeans, method = "silhouette")
+```
+## Cluster making
+
+```{r, cache=TRUE}
+set.seed(12345)
+
+# making the clusters
+optimal_k <- 5 # change this later
+km <- kmeans(clustering_calls, optimal_k)
+
+#visualize clusters
+fviz_cluster(km, data = clustering_calls)
+
+#adding clusters to models
+calls_scaled$cluster <- as.factor(km$cluster)
+```
+
+# Predictive Modeling
+
+## Split and Train Data
+
+```{r}
+#create new data fram with clusters
+calls_dummy2 <- as.data.frame(model.matrix(~. -1, data = calls_scaled))
+new_scaled_calls <- as.data.frame(lapply(calls_dummy2, minmax))
+str(new_scaled_calls)
+summary(new_scaled_calls)
+
+#split and train
+test_size <- .3*nrow(new_scaled_calls)
+set.seed(12345)
+test_rows <- sample(1:nrow(new_scaled_calls), test_size)
+calls_test <- new_scaled_calls[test_rows, ]
+calls_train <- new_scaled_calls[-test_rows, ]
+```
+
+## Logistic Model
+
+```{r}
+m1 <- glm(y ~ ., data = calls_train, family = "binomial")
+summary(m1)
+
+#predict model
+p1 <- predict(m1, calls_test, type = "response")
+summary(p1)
+
+#evaluate model
+p1bin <- ifelse(p1 > .4, 1, 0)
+confusionMatrix(as.factor(p1bin), as.factor(calls_test$y), positive = "1")
+```
+
+## KNN Model
+
+```{r}
+#build model
+left_col <- which(colnames(calls_train) == "y")
+p2 <- knn(train = calls_train[, -left_col],
+                       test = calls_test[, -left_col],
+                       cl = calls_train[, left_col],
+                       k = 101,
+                       prob = TRUE)
+summary(p2)
+
+#evaluate model
+confusionMatrix(as.factor(p2), as.factor(calls_test$y), positive = "1")
+```
+
+## ANN Model
+
+```{r, cache=TRUE}
+#build model
+m3 <- neuralnet(y ~., data = new_scaled_calls, hidden = 1, stepmax = 1e8, lifesign = "full")
+plot(m3)
+
+#predict model
+p3 <- predict(m3, newdata = calls_test)
+summary(p3)
+
+#evaluate model
+p3bin <- ifelse(p3 > .4, 1, 0)
+confusionMatrix(as.factor(p3bin), as.factor(calls_test$y), positive = "1")
+```
+
 
 
