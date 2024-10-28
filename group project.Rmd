@@ -370,6 +370,8 @@ print("\nCluster Profiles:")
 print(cluster_profiles)
 ```
 
+Based on the clustering analysis, we are dividing the population into four distinct clusters. The clusters are characterized by different success rates, average ages, and campaign contact numbers. The financial metrics show that some clusters are more profitable than others, with a return on investment (ROI) above the break-even rate of 14.14%. The two profitable clusters (cluster 3 and 4) have success rates above the break-even rate, indicating that they are more likely to generate revenue than incur costs.
+
 ## Profitability calculation
 ```{r, cache=TRUE}
 # Continuing from previous clustering analysis...
