@@ -509,14 +509,14 @@ print(improvement_summary %>%
   select(strategy, profit_improvement, efficiency_improvement) %>%
   arrange(desc(profit_improvement)))
 ```
+In order to make our call center profitable, we decided to choose the top two clusters that are above our breakeven percentage of 14.14%. With our current strategy, we are operating at a loss of -52,592.34 dollars. By choosing the top two clusters we would be profitable with 11697.97 dollars. The main underlying factor behind the success of the two clusters is if the person being called has bought our product before. While we could obtain more profit by only choosing the top cluster, that would decrease the number of total calls made from 14,199 to 9,887 which could present some risk from fewer calls going out.
 
-
-# PartC: Superviosed predictive Modeling   
+# PartC: Supervised Predictive Modeling   
 
 ## Split and Train Data
 
 ```{r}
-#create new data fram with clusters
+#create new data frame with clusters
 calls_dummy2 <- as.data.frame(model.matrix(~. -1, data = calls_scaled))
 new_scaled_calls <- as.data.frame(lapply(calls_dummy2, minmax))
 str(new_scaled_calls)
