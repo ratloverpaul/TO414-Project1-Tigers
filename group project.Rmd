@@ -516,8 +516,13 @@ In order to make our call center profitable, we decided to choose the top two cl
 ## Split and Train Data
 
 ```{r}
-#create new data frame with clusters
-calls_dummy2 <- as.data.frame(model.matrix(~. -1, data = calls_scaled))
+#create new data frame with 2 successful clusters
+calls_scaled$cluster <- as.factor(kmeans_result$cluster)
+calls_filtered <- calls_scaled %>%
+  filter(!cluster %in% c(1, 2))
+calls_filtered$cluster <- NULL
+
+calls_dummy2 <- as.data.frame(model.matrix(~. -1, data = calls_filtered))
 new_scaled_calls <- as.data.frame(lapply(calls_dummy2, minmax))
 str(new_scaled_calls)
 summary(new_scaled_calls)
@@ -593,4 +598,9 @@ p_final <- apply(p_combined, 1, function(x) {
 })
 confusionMatrix(as.factor(p_final), as.factor(tele_test$y), positive = "1")
 ```
+## Evaluation of the Models
+
+In the context of this data, a "0" indicates an unsuccessful call and a "1" means a successful telemarketing call. With this in mind, we would want a model that is best able to predict who will be successful when we call them. This means that we would also want to minimize false positives where we predicted "Success" but the actual outcome was "No Success". These are customers who were predicted to be interested but ended up not being interested. In order to save our time and money, we would want to ensure that we spend our time calling people who will actually be a "Success" or a 1. By calling these people, we could also potentially be pushing them further away from our business. This is measured by the sensitivity of the models. We want the model to be both highly accurate and sensitive, which is measured by testing data. 
+
+With this in mind, after evaluating the three models of Logistic Regression, KNN, and ANN, the combined model yields the best predictive performance. By combining the strengths of each individual model, the combined approach effectively enhances accuracy and sensitivity, making it the most reliable choice for predicting analytics. With a high acuracy rate and the highest senstivity rate of each of the models, the combined model yields the best results. 
 
