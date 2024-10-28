@@ -570,7 +570,7 @@ confusionMatrix(as.factor(p2), as.factor(calls_test$y), positive = "1")
 
 ```{r, cache=TRUE}
 #build model
-m3 <- neuralnet(y ~., data = new_scaled_calls, hidden = 3, stepmax = 1e8, lifesign = "full")
+m3 <- neuralnet(y ~., data = calls_train, hidden = 3, stepmax = 1e8, lifesign = "full")
 plot(m3)
 
 #predict model
