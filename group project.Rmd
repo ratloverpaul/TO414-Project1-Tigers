@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# Part A: Descriptive statistics
 ```{r}
 # Load necessary libraries
 library(ggplot2)
@@ -221,48 +222,294 @@ This goes along with the job types that are linked to the highest success rates.
 
 
 
-# K-Means Clustering
 
-## Scale Data
+# Part B
 
-```{r}
-#select clustering features
-clustering_calls <- calls_scaled
-clustering_calls$y <- NULL
-
-#display clustering data
-str(clustering_calls)
-summary(clustering_calls)
-```
-
-
-```{r,cache=TRUE}
-# sample data (due to storage issue) to select optimal number of clusters d
-sample_size <- .4*nrow(clustering_calls)
-sample_rows <- sample(1:nrow(clustering_calls), sample_size)
-sample_calls <- clustering_calls[sample_rows, ]
-
-#fviz_nbclust(sample_calls[,], kmeans, method = "wss")
-#fviz_nbclust(sample_calls[,], kmeans, method = "gap_stat")
-#fviz_nbclust(sample_calls[,], kmeans, method = "silhouette")
-```
-## Cluster making
-
+## Clustering
 ```{r, cache=TRUE}
-set.seed(12345)
+# Load required libraries
+library(tidyverse)
+library(cluster)
+library(factoextra)
 
-# making the clusters
-optimal_k <- 5 # change this later
-km <- kmeans(clustering_calls, optimal_k)
+# Step 1: Read and prepare the data
+calls <- read.csv("tele.csv")
 
-#visualize clusters
-fviz_cluster(km, data = clustering_calls)
+# Step 2: Data preprocessing
+# Remove non-predictive variables
+calls_clean <- calls %>%
+  select(-duration, -pdays)  # Remove duration and pdays
 
-#adding clusters to models
-calls_scaled$cluster <- as.factor(km$cluster)
+# Create numeric version of target variable
+calls_clean$y_numeric <- ifelse(calls_clean$y == "yes", 1, 0)
+
+# Step 3: Prepare data for clustering
+# Convert categorical variables to numeric
+calls_numeric <- calls_clean %>%
+  mutate(
+    job_num = as.numeric(factor(job)),
+    marital_num = as.numeric(factor(marital)),
+    education_num = as.numeric(factor(education)),
+    default_num = as.numeric(factor(default)),
+    housing_num = as.numeric(factor(housing)),
+    loan_num = as.numeric(factor(loan)),
+    contact_num = as.numeric(factor(contact)),
+    month_num = as.numeric(factor(month)),
+    day_num = as.numeric(factor(day_of_week)),
+    poutcome_num = as.numeric(factor(poutcome))
+  )
+
+# Select numeric columns for clustering
+cluster_vars <- calls_numeric %>%
+  select(age, job_num, marital_num, education_num, default_num,
+         housing_num, loan_num, contact_num, month_num, day_num,
+         poutcome_num, campaign, previous, emp.var.rate,
+         cons.price.idx, cons.conf.idx, euribor3m, nr.employed)
+
+# Scale the variables
+cluster_vars_scaled <- scale(cluster_vars)
+
+# Step 4: Determine optimal number of clusters
+# Calculate WSS for different k values
+wss <- sapply(1:10, function(k) {
+  kmeans(cluster_vars_scaled, centers = k, nstart = 25)$tot.withinss
+})
+
+# Plot elbow curve
+plot(1:10, wss, type = "b", 
+     xlab = "Number of Clusters (k)", 
+     ylab = "Within-cluster Sum of Squares",
+     main = "Elbow Method for Optimal k")
+
+# Step 5: Perform k-means clustering
+set.seed(123)
+k <- 4  # Based on elbow plot
+kmeans_result <- kmeans(cluster_vars_scaled, centers = k, nstart = 25)
+
+# Add cluster assignments to original data
+calls_clean$cluster <- as.factor(kmeans_result$cluster)
+
+# Step 6: Analyze clusters
+# Calculate success rate by cluster
+cluster_analysis <- calls_clean %>%
+  group_by(cluster) %>%
+  summarise(
+    size = n(),
+    success_rate = mean(y == "yes"),
+    avg_age = mean(age),
+    avg_campaign = mean(campaign),
+    avg_previous = mean(previous)
+  )
+
+print("Cluster Analysis:")
+print(cluster_analysis)
+
+# Step 7: Calculate financial metrics
+financial_metrics <- cluster_analysis %>%
+  mutate(
+    total_calls = size,
+    successful_calls = round(size * success_rate),
+    variable_cost = size * 1,  # $1 per call
+    revenue = successful_calls * 10,  # $10 per successful call
+    profit = revenue - variable_cost,
+    ROI = (profit / variable_cost) * 100
+  )
+
+print("\nFinancial Metrics by Cluster:")
+print(financial_metrics)
+
+# Step 8: Visualize results
+# Success rate by cluster
+ggplot(calls_clean, aes(x = cluster, fill = y)) +
+  geom_bar(position = "fill") +
+  labs(title = "Success Rate by Cluster",
+       x = "Cluster",
+       y = "Proportion") +
+  theme_minimal()
+
+# Age distribution by cluster
+ggplot(calls_clean, aes(x = cluster, y = age)) +
+  geom_boxplot() +
+  labs(title = "Age Distribution by Cluster",
+       x = "Cluster",
+       y = "Age") +
+  theme_minimal()
+
+# Campaign contacts by cluster
+ggplot(calls_clean, aes(x = cluster, y = campaign)) +
+  geom_boxplot() +
+  labs(title = "Campaign Contacts Distribution by Cluster",
+       x = "Cluster",
+       y = "Number of Contacts") +
+  theme_minimal()
+
+# Step 9: Identify profitable clusters
+breakeven_rate <- 0.1414  # As calculated in the case
+
+profitable_clusters <- financial_metrics %>%
+  filter(success_rate > breakeven_rate) %>%
+  arrange(desc(ROI))
+
+print("\nProfitable Clusters (Above Break-even Rate):")
+print(profitable_clusters)
+
+# Step 10: Profile the clusters
+cluster_profiles <- calls_clean %>%
+  group_by(cluster) %>%
+  summarise(
+    total_customers = n(),
+    success_rate = mean(y == "yes"),
+    avg_age = mean(age),
+    avg_campaign = mean(campaign),
+    most_common_job = names(which.max(table(job))),
+    most_common_education = names(which.max(table(education))),
+    most_common_marital = names(which.max(table(marital)))
+  )
+
+print("\nCluster Profiles:")
+print(cluster_profiles)
 ```
 
-# Predictive Modeling
+## Profitability calculation
+```{r, cache=TRUE}
+# Continuing from previous clustering analysis...
+
+# Define cost and revenue parameters
+cost_per_call <- 1  # Variable cost per call
+revenue_per_success <- 10  # Revenue per successful call
+training_cost_per_associate <- 1000  # Training cost per associate
+base_retention_rate <- 1000  # Base number of calls before turnover
+success_retention_boost <- 100  # Additional calls per 1% increase in success rate
+
+# Calculate profitability metrics for different strategies
+calculate_profitability <- function(data, selected_clusters) {
+  # Filter for selected clusters
+  selected_data <- data %>%
+    filter(cluster %in% selected_clusters)
+  
+  # Calculate basic metrics
+  total_calls <- nrow(selected_data)
+  success_rate <- mean(selected_data$y == "yes")
+  successful_calls <- sum(selected_data$y == "yes")
+  
+  # Calculate retention metrics
+  success_rate_improvement <- success_rate - 0.1414  # Improvement over break-even
+  retention_boost <- success_rate_improvement * 100 * success_retention_boost
+  effective_retention_rate <- base_retention_rate + retention_boost
+  
+  # Calculate number of associates needed
+  associates_needed <- total_calls / effective_retention_rate
+  
+  # Calculate costs
+  variable_costs <- total_calls * cost_per_call
+  training_costs <- associates_needed * training_cost_per_associate
+  total_costs <- variable_costs + training_costs
+  
+  # Calculate revenue and profit
+  total_revenue <- successful_calls * revenue_per_success
+  total_profit <- total_revenue - total_costs
+  
+  # ROI and other metrics
+  roi <- (total_profit / total_costs) * 100
+  profit_per_call <- total_profit / total_calls
+  
+  # Return results
+  return(data.frame(
+    clusters = paste(selected_clusters, collapse=","),
+    total_calls = total_calls,
+    success_rate = success_rate,
+    successful_calls = successful_calls,
+    associates_needed = ceiling(associates_needed),
+    variable_costs = variable_costs,
+    training_costs = training_costs,
+    total_costs = total_costs,
+    total_revenue = total_revenue,
+    total_profit = total_profit,
+    roi = roi,
+    profit_per_call = profit_per_call,
+    effective_retention_rate = effective_retention_rate
+  ))
+}
+
+# Identify profitable clusters (above break-even rate)
+profitable_clusters <- cluster_analysis %>%
+  filter(success_rate > 0.1414) %>%
+  arrange(desc(success_rate))
+
+# Calculate profitability for different targeting strategies
+# 1. All clusters (current approach)
+all_clusters_profit <- calculate_profitability(calls_clean, unique(calls_clean$cluster))
+
+# 2. Only profitable clusters
+profitable_only <- calculate_profitability(calls_clean, profitable_clusters$cluster)
+
+# 3. Top performing cluster only
+top_cluster <- profitable_clusters$cluster[1]
+top_cluster_profit <- calculate_profitability(calls_clean, top_cluster)
+
+# Combine results
+strategy_comparison <- bind_rows(
+  all_clusters_profit %>% mutate(strategy = "Current Approach (All Clusters)"),
+  profitable_only %>% mutate(strategy = "Profitable Clusters Only"),
+  top_cluster_profit %>% mutate(strategy = "Top Cluster Only")
+)
+
+# Print results
+print("Strategy Comparison:")
+print(strategy_comparison %>% 
+  select(strategy, total_calls, success_rate, total_profit, roi, profit_per_call) %>%
+  arrange(desc(total_profit)))
+
+# Create visualizations of the strategies
+# ROI Comparison
+ggplot(strategy_comparison, aes(x = strategy, y = roi)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "ROI Comparison by Strategy",
+       x = "Strategy",
+       y = "ROI (%)")
+
+# Profit per Call
+ggplot(strategy_comparison, aes(x = strategy, y = profit_per_call)) +
+  geom_bar(stat = "identity", fill = "darkgreen") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Profit per Call by Strategy",
+       x = "Strategy",
+       y = "Profit per Call ($)")
+
+# Calculate projected annual metrics
+annual_projection <- strategy_comparison %>%
+  mutate(
+    annual_calls = total_calls * (250/90), # Assuming 250 working days per year
+    annual_profit = total_profit * (250/90),
+    annual_training_costs = training_costs * (250/90)
+  )
+
+print("\nAnnual Projections:")
+print(annual_projection %>% 
+  select(strategy, annual_calls, annual_profit, annual_training_costs) %>%
+  arrange(desc(annual_profit)))
+
+# Calculate improvement metrics
+baseline_metrics <- all_clusters_profit
+improvement_summary <- strategy_comparison %>%
+  mutate(
+    profit_improvement = ((total_profit - baseline_metrics$total_profit) / 
+                           abs(baseline_metrics$total_profit)) * 100,
+    efficiency_improvement = ((profit_per_call - baseline_metrics$profit_per_call) / 
+                              abs(baseline_metrics$profit_per_call)) * 100
+  )
+
+print("Improvement Summary:")
+print(improvement_summary %>%
+  select(strategy, profit_improvement, efficiency_improvement) %>%
+  arrange(desc(profit_improvement)))
+```
+
+
+# PartC: Superviosed predictive Modeling   
 
 ## Split and Train Data
 
