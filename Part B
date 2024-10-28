@@ -281,7 +281,7 @@ improvement_summary <- strategy_comparison %>%
                               abs(baseline_metrics$profit_per_call)) * 100
   )
 
-print("\nImprovement Summary:")
+print("Improvement Summary:")
 print(improvement_summary %>%
   select(strategy, profit_improvement, efficiency_improvement) %>%
   arrange(desc(profit_improvement)))
