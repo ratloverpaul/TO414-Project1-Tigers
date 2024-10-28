@@ -327,6 +327,21 @@ summary(p3)
 p3bin <- ifelse(p3 > .4, 1, 0)
 confusionMatrix(as.factor(p3bin), as.factor(calls_test$y), positive = "1")
 ```
+# Combined Model
 
+## Build and Predict Combined Model
 
+```{r}
+#combine predictions
+p_combined <- as.data.frame(cbind(p1bin, p2, p3bin))
+```
+
+## Evaluate Combined Model
+
+```{r}
+p_final <- apply(p_combined, 1, function(x) {
+  ifelse(sum(x == 1) > length(x) / 2, 1, 0)
+})
+confusionMatrix(as.factor(p_final), as.factor(tele_test$y), positive = "1")
+```
 
